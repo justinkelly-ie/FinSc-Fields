@@ -7,9 +7,9 @@ depends = FinSc-Geometry, FinSc-Multiset-Core, FinSc-Multiset-Transform, base, l
 sourcedir = "src"
 
 modules = Fields,
-          Math.Fields.GaugeFieldStream,
-          Math.Fields.GaugeGroup,
-          Math.Fields.GaugeIsomorphism,
-          Math.Fields.SessionType
+          Stage0.Fields.GaugeFieldStream,
+          Stage0.Fields.SessionType,
+          Stage1.Fields.GaugeGroup,
+          Stage1.Fields.GaugeIsomorphism
 
 

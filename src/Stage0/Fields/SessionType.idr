@@ -1,7 +1,7 @@
-module Math.Fields.SessionType
+module Stage0.Fields.SessionType
 
-import Geometry.Applicative
-import Geometry.MetricalBounds
+import Stage0.Applicative
+import Stage1.MetricalBounds
 
 %default total
 

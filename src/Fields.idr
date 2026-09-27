@@ -1,8 +1,8 @@
 module Fields
 
-import public Math.Fields.GaugeFieldStream
-import public Math.Fields.GaugeGroup
-import public Math.Fields.GaugeIsomorphism
-import public Math.Fields.SessionType
+import public Stage0.Fields.GaugeFieldStream
+import public Stage0.Fields.SessionType
+import public Stage1.Fields.GaugeGroup
+import public Stage1.Fields.GaugeIsomorphism
 
 %default total

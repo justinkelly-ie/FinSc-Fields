@@ -1,9 +1,9 @@
-module Math.Fields.GaugeIsomorphism
+module Stage1.Fields.GaugeIsomorphism
 
-import public Core.BoxInt
-import public Core.VexelMaxel
-import public Math.ChromoCategory
-import public Math.Fields.GaugeGroup
+import public Stage0.BoxInt
+import public Stage1.VexelMaxel
+import public Stage1.ChromoCategory
+import public Stage1.Fields.GaugeGroup
 
 %default total
 

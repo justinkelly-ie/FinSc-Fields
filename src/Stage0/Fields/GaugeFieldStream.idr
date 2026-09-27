@@ -1,10 +1,10 @@
-module Math.Fields.GaugeFieldStream
+module Stage0.Fields.GaugeFieldStream
 
-import public Core.BoxInt
-import public Core.Order.Preorder
-import public Math.OnSeq.FusedStream
-import public Math.OnSeq.ConjugateAdjunction
-import public Math.Fields.GaugeGroup
+import public Stage0.BoxInt
+import public Stage1.Order.Preorder
+import public Stage0.OnSeq.FusedStream
+import public Stage1.Math.OnSeq.ConjugateAdjunction
+import public Stage1.Fields.GaugeGroup
 import Data.Fuel
 
 %default total

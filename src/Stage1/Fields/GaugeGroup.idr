@@ -1,18 +1,21 @@
-module Math.Fields.GaugeGroup
+module Stage1.Fields.GaugeGroup
 
-import Core.BoxInt
-import Core.Order.Preorder
-import Core.Multiset
-import Math.Multiset
-import Core.UnixelFraction
+import Stage0.BoxInt
+import Stage1.Order.Preorder
+import Stage0.Multiset
+import Stage0.Multiset
+import Stage1.UnixelFraction
 
-import Core.VexelMaxel
-import Core.MaxelTransform
-import Geometry.Applicative
-import Geometry.MetricalBounds
-import Math.MotivicProof
-import Math.Fields.SessionType
-import Core.Category.Adjunction
+import Stage1.VexelMaxel
+import Stage1.MaxelTransform
+import Stage0.Applicative
+import Stage1.MetricalBounds
+import Stage1.MotivicProof
+import Stage0.Fields.SessionType
+import Stage1.Category.Adjunction
+import Stage1.TypeTheory.Staging
+import Stage1.TypeTheory.TwoLevel
+
 
 %default total
 
@@ -141,7 +144,7 @@ transportField phase (BoxSpace space tensor) =
 
 ||| Static compiler proof witness verifying group action identity law (unitGaugePhase * g = g).
 public export
-0 verifyGaugeGroupIdentity : (g : GaugePhase) -> mulGaugePhase Math.Fields.GaugeGroup.unitGaugePhase g = g
+0 verifyGaugeGroupIdentity : (g : GaugePhase) -> mulGaugePhase Stage1.Fields.GaugeGroup.unitGaugePhase g = g
 verifyGaugeGroupIdentity (MkGaugePhase p) = Refl
 
 ||| Static compiler proof auditing gauge invariance of electromagnetic field energy.
@@ -224,5 +227,20 @@ auditMultisetFieldEnergyProof =
   let m = makeMultisetGaugeTensor (intToBoxInt 3) (intToBoxInt 4)
       energy = computeMultisetFieldEnergy m
   in unwrapBox energy == 25
+
+--------------------------------------------------------------------------------
+-- 6. 2LTT STAGING CODE GENERATOR TRANSDUCER
+--------------------------------------------------------------------------------
+
+||| Deforested 2LTT staged code generator transducer for gauge field energy density.
+%inline public export
+stagedFieldEnergy : Multiset BoxInt GaugeFieldKey -> Code BoxInt
+stagedFieldEnergy m = quote (computeMultisetFieldEnergy m)
+
+||| QTT 0 erased proof witness verifying gauge field energy staging inverse identity.
+public export
+0 prfStagedFieldEnergy : (m : Multiset BoxInt GaugeFieldKey) -> splice (stagedFieldEnergy m) = computeMultisetFieldEnergy m
+prfStagedFieldEnergy m = inverseSpliceQuote (computeMultisetFieldEnergy m)
+
 
 
