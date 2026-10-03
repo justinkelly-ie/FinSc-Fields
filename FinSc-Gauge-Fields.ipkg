@@ -3,7 +3,7 @@ version = 0.1.0
 authors = "Justin Kelly"
 brief   = "Layer 4a Monadic Session Types, Gauge Symmetry Streams & Plaquette Circulation."
 
-depends = FinSc-Geometry, FinSc-Multiset, FinSc-Metric-Substrate, FinSc-Multiset-Transform, base, linear
+depends = FinSc-Geometry, FinSc-Multiset, FinSc-Metric-Substrate, FinSc-Phase-Unfolding, base, linear
 sourcedir = "src"
 
 modules = GaugeFields,
