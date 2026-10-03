@@ -12,7 +12,7 @@ import Stage0.Applicative
 import Stage1.MetricalBounds
 import Stage1.MotivicProof
 import Stage0.Fields.SessionType
-import Stage1.Category.Adjunction
+import Stage1.MultisetDuality
 import Stage1.TypeTheory.Staging
 import Stage1.TypeTheory.TwoLevel
 

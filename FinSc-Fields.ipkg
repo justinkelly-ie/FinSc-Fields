@@ -1,9 +1,9 @@
 package FinSc-Fields
 version = 0.1.0
 authors = "Justin Kelly"
-brief   = "Layer 7 Monadic Session Types, Gauge Fields & Group Actions Subsystem."
+brief   = "Layer 4a Monadic Session Types, Gauge Fields & Group Actions Subsystem."
 
-depends = FinSc-Geometry, FinSc-Multiset-Core, FinSc-Multiset-Transform, base, linear
+depends = FinSc-Geometry, FinSc-Multiset, FinSc-Metric-Substrate, FinSc-Multiset-Transform, base, linear
 sourcedir = "src"
 
 modules = Fields,

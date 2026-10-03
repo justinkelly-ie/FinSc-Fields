@@ -3,7 +3,7 @@ module Stage0.Fields.GaugeFieldStream
 import public Stage0.BoxInt
 import public Stage1.Order.Preorder
 import public Stage0.OnSeq.FusedStream
-import public Stage1.Math.OnSeq.ConjugateAdjunction
+import public Stage1.Math.OnSeq.ConjugateDuality
 import public Stage1.Fields.GaugeGroup
 import Data.Fuel
 
