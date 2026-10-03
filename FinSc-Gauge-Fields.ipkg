@@ -12,6 +12,7 @@ modules = GaugeFields,
           Stage0.Fields.GaugeFieldStream,
           Stage0.Fields.SessionType,
           Stage1.Fields.GaugeGroup,
-          Stage1.Fields.GaugeIsomorphism
+          Stage1.Fields.GaugeIsomorphism,
+          Stage1.Fields.GaugeRepIso
 
 

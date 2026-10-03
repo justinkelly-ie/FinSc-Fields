@@ -1,8 +1,6 @@
+||| @deprecated Use `import GaugeFields` instead. This legacy module alias is preserved for backward compatibility.
 module Fields
 
-import public Stage0.Fields.GaugeFieldStream
-import public Stage0.Fields.SessionType
-import public Stage1.Fields.GaugeGroup
-import public Stage1.Fields.GaugeIsomorphism
+import public GaugeFields
 
 %default total
