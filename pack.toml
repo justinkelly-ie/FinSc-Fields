@@ -1,7 +1,7 @@
 [package]
-name = "FinSc-Fields"
+name = "FinSc-Gauge-Fields"
 version = "0.1.0"
-ipkg = "FinSc-Fields.ipkg"
+ipkg = "FinSc-Gauge-Fields.ipkg"
 
 [custom.all.FinSc-Multiset-Core]
 type = "local"
