@@ -7,6 +7,7 @@ depends = FinSc-Geometry, FinSc-Multiset, FinSc-Metric-Substrate, FinSc-Phase-Un
 sourcedir = "src"
 
 modules = GaugeFields,
+          Reflect.GaugeAuditor,
           Fields,
           Stage0.Fields.GaugeFieldStream,
           Stage0.Fields.SessionType,
