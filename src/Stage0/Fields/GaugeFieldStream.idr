@@ -52,6 +52,12 @@ unfoldGaugeStream items = MkStream nextStep items
     nextStep [] = Done
     nextStep ((idx, val) :: rest) = Yield (MkGaugeToken idx val) rest
 
+||| Integrates total gauge flux directly across a deforested GaugeFieldToken stream.
+public export
+fusedIntegrateGaugeFluxStream : Fuel -> FusedStream GaugeFieldToken -> BoxInt
+fusedIntegrateGaugeFluxStream f strm =
+  foldStreamFuel f (\acc, tok => addBox (strength tok) acc) (intToBoxInt 0) strm
+
 ||| Integrates total gauge flux \oint F_{\mu\nu} across a deforested stream using foldStreamNat.
 public export
 fusedIntegrateGaugeFlux : Fuel -> List (SpacetimeIndex, BoxInt) -> BoxInt
@@ -84,6 +90,15 @@ siftGaugeStream = siftFusedStream
 siftGaugeStreamByIndex : SpacetimeIndex -> FusedStream GaugeFieldToken -> FusedStream GaugeFieldToken
 siftGaugeStreamByIndex target = siftFusedStream (\tok => index tok == target)
 
+||| Computes sifted gauge flux density directly across a deforested gauge field stream.
+public export
+fusedComputeGaugeFluxStreamDirect : Fuel -> (GaugeFieldToken -> Bool) -> FusedStream GaugeFieldToken -> BoxInt
+fusedComputeGaugeFluxStreamDirect f pred strm =
+  foldStreamFuel f
+    (\acc, tok => if pred tok then addBox (strength tok) acc else acc)
+    (intToBoxInt 0)
+    strm
+
 ||| Computes sifted gauge flux density for a predicate over a deforested gauge field stream.
 public export
 fusedComputeGaugeFluxStream : Fuel -> (GaugeFieldToken -> Bool) -> List (SpacetimeIndex, BoxInt) -> BoxInt
@@ -95,18 +110,23 @@ fusedComputeGaugeFluxStream _ pred items =
     (intToBoxInt 0)
     (stream items)
 
+||| Zero-allocation single-pass field tensor flux decomposition directly across a FusedStream GaugeFieldToken.
+public export
+fusedComputeFieldTensorStreamDirect : Fuel -> FusedStream GaugeFieldToken -> (BoxInt, BoxInt)
+fusedComputeFieldTensorStreamDirect f strm =
+  foldStreamFuel f
+    (\acc, tok =>
+      if mu (index tok) == 0 || nu (index tok) == 0
+        then (addBox (strength tok) (fst acc), snd acc)
+        else (fst acc, addBox (strength tok) (snd acc)))
+    (the (BoxInt, BoxInt) (intToBoxInt 0, intToBoxInt 0))
+    strm
+
 ||| Zero-allocation single-pass field tensor flux decomposition (temporal/E-field vs spatial/B-field components).
 public export
 fusedComputeFieldTensorStream : Fuel -> List (SpacetimeIndex, BoxInt) -> (BoxInt, BoxInt)
-fusedComputeFieldTensorStream _ items =
-  foldStreamNat (length items)
-    (\(eFlux, bFlux), (idx, val) =>
-      let tok = MkGaugeToken idx val
-      in if mu (index tok) == 0 || nu (index tok) == 0
-           then (strength tok + eFlux, bFlux)
-           else (eFlux, strength tok + bFlux))
-    (intToBoxInt 0, intToBoxInt 0)
-    (stream items)
+fusedComputeFieldTensorStream f items =
+  fusedComputeFieldTensorStreamDirect f (unfoldGaugeStream items)
 
 --------------------------------------------------------------------------------
 -- 2. DEFORESTED WILSON LOOP PLAQUETTE STREAMING
