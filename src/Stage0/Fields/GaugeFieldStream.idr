@@ -204,6 +204,38 @@ fastWilsonLoopTrace : GaugeTransfer2x2 -> Nat -> BoxInt
 fastWilsonLoopTrace linkM n =
   traceGaugeTransfer2x2 (fastWilsonLoopTransfer linkM n)
 
+||| A discrete 4-vertex lattice plaquette link loop [A -> B -> C -> D -> A].
+||| Composes directed link Maxels via sparse matrix multiplication.
+public export
+latticePlaquetteLoopMaxel : (a, b, c, d : Nat) -> (w : BoxInt) -> Stage1.VexelMaxel.Maxel
+latticePlaquetteLoopMaxel a b c d w =
+  let l1 = MkMaxel [(MkPixel a b, intToBoxInt 1)]
+      l2 = MkMaxel [(MkPixel b c, intToBoxInt 1)]
+      l3 = MkMaxel [(MkPixel c d, intToBoxInt 1)]
+      l4 = MkMaxel [(MkPixel d a, w)]
+  in mulMaxel (mulMaxel (mulMaxel l1 l2) l3) l4
+
+||| Compile-time verification witness: Closed plaquette operator definitionally reduces
+||| to a pure diagonal Maxel [A, A] via discrete basis contraction:
+||| [A, B] * [B, C] * [C, D] * [D, A] = [A, A].
+public export
+auditPlaquetteLoopDiagonalProof : (a, b, c, d : Nat) -> (w : BoxInt) -> Bool
+auditPlaquetteLoopDiagonalProof a b c d w =
+  let mPlaq = latticePlaquetteLoopMaxel a b c d w
+      wDiag = lookupPixel (MkPixel a a) mPlaq
+  in boxEq wDiag w
+
+||| Invariant audit: Plaquette operator preserves matter coordinate locality without spatial drift:
+||| U_plaq * [A] == w * [A], guaranteeing coordinate non-destruction under gauge flux.
+public export
+auditPlaquetteMatterLocalityProof : (a, b, c, d : Nat) -> (w, v : BoxInt) -> Bool
+auditPlaquetteMatterLocalityProof a b c d w v =
+  let mPlaq = latticePlaquetteLoopMaxel a b c d w
+      vIn   = MkVexel [(MkUnixel a, v)]
+      vOut  = canonicalizeVexel (actMaxelVexel mPlaq vIn)
+      vDiag = lookupUnixel (MkUnixel a) vOut
+  in boxEq vDiag (w * v)
+
 --------------------------------------------------------------------------------
 -- 3. VERIFICATION AUDIT WITNESS
 --------------------------------------------------------------------------------
@@ -230,13 +262,16 @@ auditGaugeFieldStreamProof =
       traceLoop2 = fastWilsonLoopTrace rot90 2
       streamLoop = streamWilsonLoopTransfer (stream [rot90, rot90, rot90, rot90])
       traceStream4 = traceGaugeTransfer2x2 streamLoop
+      plaqDiag = auditPlaquetteLoopDiagonalProof 1 2 3 4 (intToBoxInt 7)
+      plaqLoc  = auditPlaquetteMatterLocalityProof 1 2 3 4 (intToBoxInt 7) (intToBoxInt 5)
 
   in unwrapBox flux1 == 20 && flux1 == flux2 &&
      unwrapBox siftedFlux == 12 &&
      unwrapBox eFlux == 12 && unwrapBox bFlux == 8 &&
      unwrapBox loopTrace == 4 &&
      unwrapBox traceLoop4 == 2 && unwrapBox traceLoop2 == (-2) &&
-     unwrapBox traceStream4 == 2
+     unwrapBox traceStream4 == 2 &&
+     plaqDiag && plaqLoc
 
 --------------------------------------------------------------------------------
 -- 4. BIANCHI GAUGE FIELD STREAM TRANSPORT
