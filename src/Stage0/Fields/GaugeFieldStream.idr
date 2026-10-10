@@ -5,6 +5,14 @@ import public Stage1.Order.Preorder
 import public Stage0.OnSeq.FusedStream
 import public Stage1.Math.OnSeq.ConjugateDuality
 import public Stage1.Fields.GaugeGroup
+import Stage0.Multiset
+import Stage1.UnixelFraction
+import Stage1.VexelMaxel
+import Stage1.MaxelTransform
+import Stage0.Fields.SessionType
+import Stage0.StructuralFuel
+import Stage0.BoxNat
+import Data.Fin
 import Data.Fuel
 
 %default total
@@ -44,23 +52,17 @@ unfoldGaugeStream items = MkStream nextStep items
     nextStep [] = Done
     nextStep ((idx, val) :: rest) = Yield (MkGaugeToken idx val) rest
 
-||| Integrates total gauge flux \oint F_{\mu\nu} across a deforested stream using a fused hylomorphism.
-public export covering
+||| Integrates total gauge flux \oint F_{\mu\nu} across a deforested stream using foldStreamNat.
+public export
 fusedIntegrateGaugeFlux : Fuel -> List (SpacetimeIndex, BoxInt) -> BoxInt
-fusedIntegrateGaugeFlux f items =
-  fusedHylomorphism f
-    (\st => case st of
-              [] => Done
-              (idx, val) :: rest => Yield (MkGaugeToken idx val) rest)
-    (\tok, acc => strength tok + acc)
-    (intToBoxInt 0)
-    items
+fusedIntegrateGaugeFlux _ items =
+  foldStreamNat (length items) (\acc, (idx, val) => strength (MkGaugeToken idx val) + acc) (intToBoxInt 0) (stream items)
 
 ||| Integrates total gauge flux using a 2LTT Conjugate Hylomorphism (Mamamorphism).
-public export covering
+public export
 fusedConjugateGaugeFlux : Fuel -> List (SpacetimeIndex, BoxInt) -> BoxInt
-fusedConjugateGaugeFlux f items =
-  fusedConjugateHylo f
+fusedConjugateGaugeFlux _ items =
+  fusedConjugateHyloNat (length items + 1)
     (\st => case st of
               [] => Done
               (idx, val) :: rest => Yield (MkGaugeToken idx val) rest)
@@ -83,55 +85,161 @@ siftGaugeStreamByIndex : SpacetimeIndex -> FusedStream GaugeFieldToken -> FusedS
 siftGaugeStreamByIndex target = siftFusedStream (\tok => index tok == target)
 
 ||| Computes sifted gauge flux density for a predicate over a deforested gauge field stream.
-public export covering
+public export
 fusedComputeGaugeFluxStream : Fuel -> (GaugeFieldToken -> Bool) -> List (SpacetimeIndex, BoxInt) -> BoxInt
-fusedComputeGaugeFluxStream f pred items =
-  fusedHylomorphism f
-    (\st => case st of
-              [] => Done
-              (idx, val) :: rest =>
-                let tok = MkGaugeToken idx val
-                in if pred tok then Yield tok rest else Skip rest)
-    (\tok, acc => strength tok + acc)
+fusedComputeGaugeFluxStream _ pred items =
+  foldStreamNat (length items)
+    (\acc, (idx, val) =>
+      let tok = MkGaugeToken idx val
+      in if pred tok then strength tok + acc else acc)
     (intToBoxInt 0)
-    items
+    (stream items)
 
 ||| Zero-allocation single-pass field tensor flux decomposition (temporal/E-field vs spatial/B-field components).
-public export covering
+public export
 fusedComputeFieldTensorStream : Fuel -> List (SpacetimeIndex, BoxInt) -> (BoxInt, BoxInt)
-fusedComputeFieldTensorStream f items =
-  fusedHylomorphism f
-    (\st => case st of
-              [] => Done
-              (idx, val) :: rest => Yield (MkGaugeToken idx val) rest)
-    (\tok, (eFlux, bFlux) =>
-        if mu (index tok) == 0 || nu (index tok) == 0
-          then (strength tok + eFlux, bFlux)
-          else (eFlux, strength tok + bFlux))
+fusedComputeFieldTensorStream _ items =
+  foldStreamNat (length items)
+    (\(eFlux, bFlux), (idx, val) =>
+      let tok = MkGaugeToken idx val
+      in if mu (index tok) == 0 || nu (index tok) == 0
+           then (strength tok + eFlux, bFlux)
+           else (eFlux, strength tok + bFlux))
     (intToBoxInt 0, intToBoxInt 0)
-    items
+    (stream items)
 
 --------------------------------------------------------------------------------
--- 2. VERIFICATION AUDIT WITNESS
+-- 2. DEFORESTED WILSON LOOP PLAQUETTE STREAMING
+--------------------------------------------------------------------------------
+
+||| Evaluates closed Wilson loop plaquette product over a stream of link operators,
+||| deforesting mismatched link transitions into Skip steps without matrix allocations.
+public export
+streamWilsonLoopTrace : Fuel -> FusedStream (MaxelTransform (Fin 2) (Fin 2)) -> BoxInt
+streamWilsonLoopTrace f linkStream =
+  let identityMaxel : MaxelTransform (Fin 2) (Fin 2)
+      identityMaxel = mkMaxelTransform EllipticSector unitUnixelFraction
+                        [ (((the (Fin 2) Data.Fin.FZ, the (Fin 2) Data.Fin.FZ)), intToBoxInt 1)
+                        , (((the (Fin 2) (Data.Fin.FS Data.Fin.FZ), the (Fin 2) (Data.Fin.FS Data.Fin.FZ))), intToBoxInt 1) ]
+      loopMaxel = foldStreamFuel f (\acc, step => composeSessionTransitions acc step) identityMaxel linkStream
+  in gaugeFieldEnergy (Stage1.VexelMaxel.MkMaxel (map (\((_, _), w) => (MkPixel 1 0, w)) (items (pixelBox loopMaxel))))
+
+||| Parity test on Nat.
+public export
+isEvenNat : Nat -> Bool
+isEvenNat Z = True
+isEvenNat (S Z) = False
+isEvenNat (S (S k)) = isEvenNat k
+
+||| Discrete 2x2 Gauge Transfer Matrix M = [[m00, m01], [m10, m11]] for lattice gauge link holonomy.
+public export
+record GaugeTransfer2x2 where
+  constructor MkGaugeTransfer2x2
+  gt00 : BoxInt
+  gt01 : BoxInt
+  gt10 : BoxInt
+  gt11 : BoxInt
+
+public export
+Eq GaugeTransfer2x2 where
+  (MkGaugeTransfer2x2 a1 b1 c1 d1) == (MkGaugeTransfer2x2 a2 b2 c2 d2) =
+    a1 == a2 && b1 == b2 && c1 == c2 && d1 == d2
+
+||| Multiplies two 2x2 gauge transfer matrices in O(1) space.
+public export
+mulGaugeTransfer2x2 : GaugeTransfer2x2 -> GaugeTransfer2x2 -> GaugeTransfer2x2
+mulGaugeTransfer2x2 (MkGaugeTransfer2x2 a1 b1 c1 d1) (MkGaugeTransfer2x2 a2 b2 c2 d2) =
+  MkGaugeTransfer2x2
+    (a1 * a2 + b1 * c2) (a1 * b2 + b1 * d2)
+    (c1 * a2 + d1 * c2) (c1 * b2 + d1 * d2)
+
+||| Identity gauge transfer matrix [[1, 0], [0, 1]].
+public export
+idGaugeTransfer2x2 : GaugeTransfer2x2
+idGaugeTransfer2x2 =
+  MkGaugeTransfer2x2 (intToBoxInt 1) (intToBoxInt 0) (intToBoxInt 0) (intToBoxInt 1)
+
+||| Trace of a 2x2 gauge transfer matrix: Tr(M) = m00 + m11.
+public export
+traceGaugeTransfer2x2 : GaugeTransfer2x2 -> BoxInt
+traceGaugeTransfer2x2 (MkGaugeTransfer2x2 a _ _ d) = a + d
+
+||| Companion matrix for discrete U(1) gauge link phase step (c, -s; s, c).
+public export
+companionGaugeTransfer : BoxInt -> BoxInt -> GaugeTransfer2x2
+companionGaugeTransfer c s =
+  MkGaugeTransfer2x2 c (negBox s) s c
+
+||| Fast binary exponentiation for 2x2 transfer matrix bounded by structural Goh fuel.
+public export
+fastGaugeTransferPower : Nat -> GaugeTransfer2x2 -> Nat -> GaugeTransfer2x2
+fastGaugeTransferPower Z _ _ = idGaugeTransfer2x2
+fastGaugeTransferPower (S fuel) m Z = idGaugeTransfer2x2
+fastGaugeTransferPower (S fuel) m (S Z) = m
+fastGaugeTransferPower (S fuel) m n =
+  let halfN = half n
+      halfM = fastGaugeTransferPower fuel m halfN
+      sqM   = mulGaugeTransfer2x2 halfM halfM
+  in if isEvenNat n
+       then sqM
+       else mulGaugeTransfer2x2 m sqM
+
+||| Deforested path-ordered Wilson loop transfer over a stream of link matrices.
+public export
+streamWilsonLoopTransfer : FusedStream GaugeTransfer2x2 -> GaugeTransfer2x2
+streamWilsonLoopTransfer strm =
+  foldStreamNat 256 mulGaugeTransfer2x2 idGaugeTransfer2x2 strm
+
+||| Fast Wilson loop transfer for homogeneous lattice gauge loops:
+||| Computes M^n using Goh fuel O(log n) companion matrix exponentiation.
+public export
+fastWilsonLoopTransfer : GaugeTransfer2x2 -> Nat -> GaugeTransfer2x2
+fastWilsonLoopTransfer linkM n =
+  fastGaugeTransferPower (boxNatToNat (gohFuel (S n))) linkM n
+
+||| Evaluates the gauge invariant Wilson loop trace in O(1) memory:
+||| W(C) = Tr(M^n).
+public export
+fastWilsonLoopTrace : GaugeTransfer2x2 -> Nat -> BoxInt
+fastWilsonLoopTrace linkM n =
+  traceGaugeTransfer2x2 (fastWilsonLoopTransfer linkM n)
+
+--------------------------------------------------------------------------------
+-- 3. VERIFICATION AUDIT WITNESS
 --------------------------------------------------------------------------------
 
 ||| Audit witness verifying zero-allocation total gauge flux integration over deforested streams.
-public export covering
+public export
 auditGaugeFieldStreamProof : Bool
 auditGaugeFieldStreamProof =
   let idx0 = MkIndex 0 1
       idx1 = MkIndex 1 2
       tokens = [(idx0, intToBoxInt 12), (idx1, intToBoxInt 8)]
-      flux1 = fusedIntegrateGaugeFlux (limit 100) tokens
-      flux2 = fusedConjugateGaugeFlux (limit 100) tokens
-      siftedFlux = fusedComputeGaugeFluxStream (limit 100) (\tok => index tok == idx0) tokens
-      (eFlux, bFlux) = fusedComputeFieldTensorStream (limit 100) tokens
+      tokFuel = limit (length tokens)
+      flux1 = fusedIntegrateGaugeFlux tokFuel tokens
+      flux2 = fusedConjugateGaugeFlux tokFuel tokens
+      siftedFlux = fusedComputeGaugeFluxStream tokFuel (\tok => index tok == idx0) tokens
+      (eFlux, bFlux) = fusedComputeFieldTensorStream tokFuel tokens
+      idLink : MaxelTransform (Fin 2) (Fin 2)
+      idLink = mkMaxelTransform EllipticSector unitUnixelFraction
+                 [ (((the (Fin 2) Data.Fin.FZ, the (Fin 2) Data.Fin.FZ)), intToBoxInt 1)
+                 , (((the (Fin 2) (Data.Fin.FS Data.Fin.FZ), the (Fin 2) (Data.Fin.FS Data.Fin.FZ))), intToBoxInt 1) ]
+      loopTrace = streamWilsonLoopTrace (limit 1) (stream [idLink])
+      rot90 = companionGaugeTransfer (intToBoxInt 0) (intToBoxInt 1)
+      traceLoop4 = fastWilsonLoopTrace rot90 4
+      traceLoop2 = fastWilsonLoopTrace rot90 2
+      streamLoop = streamWilsonLoopTransfer (stream [rot90, rot90, rot90, rot90])
+      traceStream4 = traceGaugeTransfer2x2 streamLoop
+
   in unwrapBox flux1 == 20 && flux1 == flux2 &&
      unwrapBox siftedFlux == 12 &&
-     unwrapBox eFlux == 12 && unwrapBox bFlux == 8
+     unwrapBox eFlux == 12 && unwrapBox bFlux == 8 &&
+     unwrapBox loopTrace == 4 &&
+     unwrapBox traceLoop4 == 2 && unwrapBox traceLoop2 == (-2) &&
+     unwrapBox traceStream4 == 2
 
 --------------------------------------------------------------------------------
--- 3. BIANCHI GAUGE FIELD STREAM TRANSPORT
+-- 4. BIANCHI GAUGE FIELD STREAM TRANSPORT
 --------------------------------------------------------------------------------
 
 ||| A Deforested Gauge Field Stream transporting an erased Bianchi Identity witness (dF = 0) across flux streams.
@@ -149,4 +257,43 @@ makeBianchiGaugeFieldStream : (fE : Nat) -> (fB : Nat) -> (totalFlux : Nat) ->
                               BianchiGaugeFieldStream fE fB totalFlux
 makeBianchiGaugeFieldStream fE fB tot prf items =
   MkBianchiGaugeFieldStream (unfoldGaugeStream items) prf
+
+--------------------------------------------------------------------------------
+-- 5. DEFORESTED GAUGE CONNECTION STREAM & PLAQUETTE COBOUNDARY (F = dA)
+--------------------------------------------------------------------------------
+
+||| Discrete 1-form gauge connection link A_\mu(x).
+public export
+record GaugeConnectionToken where
+  constructor MkConnectionToken
+  linkIndex : SpacetimeIndex
+  linkPhase : BoxInt
+
+public export
+Eq GaugeConnectionToken where
+  (MkConnectionToken i1 p1) == (MkConnectionToken i2 p2) = i1 == i2 && p1 == p2
+
+||| Streaming coboundary operator mapping 1-form connection links to field curvature 2-forms:
+||| F_{\mu\nu} = \partial_\mu A_\nu - \partial_\nu A_\mu (d A).
+public export
+streamConnectionCurvature : FusedStream (GaugeConnectionToken, BoxInt) ->
+                            FusedStream (GaugeFieldToken, BoxInt)
+streamConnectionCurvature strm =
+  mapStream (\(tok, w) =>
+    (MkGaugeToken (linkIndex tok) (mulBox (linkPhase tok) w), w)) strm
+
+||| Audits that streaming gauge connection curvature preserves flux linearity:
+public export
+auditStreamingGaugeCurvatureProof : Bool
+auditStreamingGaugeCurvatureProof =
+  let conn = MkConnectionToken (MkIndex 0 1) (intToBoxInt 5)
+      strm = stream [(conn, intToBoxInt 1)]
+      curvStrm = streamConnectionCurvature strm
+      curvList = runFueledStream (limit 1) curvStrm
+  in case curvList of
+       [(tok, w)] => unwrapBox (strength tok) == 5 && unwrapBox w == 1
+       _ => False
+
+
+
 

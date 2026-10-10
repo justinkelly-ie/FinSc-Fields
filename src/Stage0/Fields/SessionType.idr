@@ -7,6 +7,8 @@ module Stage0.Fields.SessionType
 
 import Stage0.BoxInt
 import Stage0.Multiset
+import Stage0.OnSeq.FusedStream
+import Stage1.MaxelTransform
 
 %default total
 
@@ -125,3 +127,19 @@ public export
   boxEq (addBox (MkBoxInt 15) (addBox (MkBoxInt 25) (MkBoxInt 10)))
         (addBox (addBox (MkBoxInt 15) (MkBoxInt 25)) (MkBoxInt 10)) = True
 prfBilateralExchangeConservation = Refl
+
+--------------------------------------------------------------------------------
+-- 4. STREAMING SESSION TRANSDUCTION & CUT-ELIMINATION BETA-REDUCTION
+--------------------------------------------------------------------------------
+
+||| Deforested stream session action:
+||| Transduces a stream of gauge tokens through a MaxelTransform in a single deforested pass.
+public export
+streamSessionTransduce : Eq a => Eq b => MaxelTransform a b -> FusedStream (a, BoxInt) -> FusedStream (b, BoxInt)
+streamSessionTransduce transform strm = streamMaxelAction transform strm
+
+||| 2D x 2D Cut-elimination for bilateral gauge transitions across intermediate wire b.
+public export
+composeSessionTransitions : Eq a => Eq b => Eq c =>
+                            MaxelTransform a b -> MaxelTransform b c -> MaxelTransform a c
+composeSessionTransitions t1 t2 = maxelMaxelBeta t1 t2
