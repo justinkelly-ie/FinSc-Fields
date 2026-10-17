@@ -318,16 +318,15 @@ auditGaugeFieldStreamProof =
   let idx0 = MkIndex 0 1
       idx1 = MkIndex 1 2
       tokens = [(idx0, intToBoxInt 12), (idx1, intToBoxInt 8)]
-      tokFuel = limit (length tokens)
-      flux1 = fusedIntegrateGaugeFlux tokFuel tokens
-      flux2 = fusedConjugateGaugeFlux tokFuel tokens
-      siftedFlux = fusedComputeGaugeFluxStream tokFuel (\tok => index tok == idx0) tokens
-      (eFlux, bFlux) = fusedComputeFieldTensorStream tokFuel tokens
+      flux1 = fusedIntegrateGaugeFluxFuelModel hyperbolicGohFuelModel tokens
+      flux2 = fusedConjugateGaugeFluxFuelModel hyperbolicGohFuelModel tokens
+      siftedFlux = fusedComputeGaugeFluxStreamFuelModel (\tok => index tok == idx0) (unfoldGaugeStream tokens)
+      (eFlux, bFlux) = fusedComputeFieldTensorStreamFuelModel (unfoldGaugeStream tokens)
       idLink : MaxelTransform (Fin 2) (Fin 2)
       idLink = mkMaxelTransform EllipticSector unitUnixelFraction
                  [ (((the (Fin 2) Data.Fin.FZ, the (Fin 2) Data.Fin.FZ)), intToBoxInt 1)
                  , (((the (Fin 2) (Data.Fin.FS Data.Fin.FZ), the (Fin 2) (Data.Fin.FS Data.Fin.FZ))), intToBoxInt 1) ]
-      loopTrace = streamWilsonLoopTrace (limit 1) (stream [idLink])
+      loopTrace = streamWilsonLoopTraceFuelModel (stream [idLink])
       rot90 = companionGaugeTransfer (intToBoxInt 0) (intToBoxInt 1)
       traceLoop4 = fastWilsonLoopTrace rot90 4
       traceLoop2 = fastWilsonLoopTrace rot90 2
@@ -395,7 +394,7 @@ auditStreamingGaugeCurvatureProof =
   let conn = MkConnectionToken (MkIndex 0 1) (intToBoxInt 5)
       strm = stream [(conn, intToBoxInt 1)]
       curvStrm = streamConnectionCurvature strm
-      curvList = runFueledStream (limit 1) curvStrm
+      curvList = runFueledStreamNat 1 curvStrm
   in case curvList of
        [(tok, w)] => unwrapBox (strength tok) == 5 && unwrapBox w == 1
        _ => False
