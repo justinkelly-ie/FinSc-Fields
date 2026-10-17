@@ -171,6 +171,18 @@ streamWilsonLoopTrace f linkStream =
       loopMaxel = foldStreamFuel f (\acc, step => composeSessionTransitions acc step) identityMaxel linkStream
   in gaugeFieldEnergy (Stage1.VexelMaxel.MkMaxel (map (\((_, _), w) => (MkPixel 1 0, w)) (items (pixelBox loopMaxel))))
 
+||| Evaluates closed Wilson loop plaquette product over a stream of link operators
+||| using model-indexed Hyperbolic GohFuel (128 DE ROM, Rule 03, Item 1; Rule 04, Item 4).
+public export
+streamWilsonLoopTraceFuelModel : FusedStream (MaxelTransform (Fin 2) (Fin 2)) -> BoxInt
+streamWilsonLoopTraceFuelModel linkStream =
+  let identityMaxel : MaxelTransform (Fin 2) (Fin 2)
+      identityMaxel = mkMaxelTransform EllipticSector unitUnixelFraction
+                        [ (((the (Fin 2) Data.Fin.FZ, the (Fin 2) Data.Fin.FZ)), intToBoxInt 1)
+                        , (((the (Fin 2) (Data.Fin.FS Data.Fin.FZ), the (Fin 2) (Data.Fin.FS Data.Fin.FZ))), intToBoxInt 1) ]
+      loopMaxel = foldStreamNat (gohSteps hyperbolicGohFuelModel) (\acc, step => composeSessionTransitions acc step) identityMaxel linkStream
+  in gaugeFieldEnergy (Stage1.VexelMaxel.MkMaxel (map (\((_, _), w) => (MkPixel 1 0, w)) (items (pixelBox loopMaxel))))
+
 ||| Parity test on Nat.
 public export
 isEvenNat : Nat -> Bool
@@ -242,7 +254,7 @@ streamWilsonLoopTransfer strm =
 public export
 fastWilsonLoopTransfer : GaugeTransfer2x2 -> Nat -> GaugeTransfer2x2
 fastWilsonLoopTransfer linkM n =
-  fastGaugeTransferPower (boxNatToNat (gohFuel (S n))) linkM n
+  fastGaugeTransferPower (gohSteps (gohFuelForCapacity (S n))) linkM n
 
 ||| Evaluates the gauge invariant Wilson loop trace in O(1) memory:
 ||| W(C) = Tr(M^n).
