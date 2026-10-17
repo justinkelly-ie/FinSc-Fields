@@ -58,6 +58,12 @@ fusedIntegrateGaugeFluxStream : Fuel -> FusedStream GaugeFieldToken -> BoxInt
 fusedIntegrateGaugeFluxStream f strm =
   foldStreamFuel f (\acc, tok => addBox (strength tok) acc) (intToBoxInt 0) strm
 
+||| Integrates total gauge flux directly across a deforested GaugeFieldToken stream using Hyperbolic GohFuel (128 DE ROM, Rule 03, Item 1; Rule 04, Item 4).
+public export
+fusedIntegrateGaugeFluxStreamFuelModel : FusedStream GaugeFieldToken -> BoxInt
+fusedIntegrateGaugeFluxStreamFuelModel strm =
+  foldStreamNat (gohSteps hyperbolicGohFuelModel) (\acc, tok => addBox (strength tok) acc) (intToBoxInt 0) strm
+
 ||| Integrates total gauge flux \oint F_{\mu\nu} across a deforested stream using foldStreamNat.
 public export
 fusedIntegrateGaugeFlux : Fuel -> List (SpacetimeIndex, BoxInt) -> BoxInt
@@ -127,6 +133,27 @@ public export
 fusedComputeFieldTensorStream : Fuel -> List (SpacetimeIndex, BoxInt) -> (BoxInt, BoxInt)
 fusedComputeFieldTensorStream f items =
   fusedComputeFieldTensorStreamDirect f (unfoldGaugeStream items)
+
+||| Computes sifted gauge flux density directly across a deforested stream using Hyperbolic GohFuel (128 DE ROM).
+public export
+fusedComputeGaugeFluxStreamFuelModel : (GaugeFieldToken -> Bool) -> FusedStream GaugeFieldToken -> BoxInt
+fusedComputeGaugeFluxStreamFuelModel pred strm =
+  foldStreamNat (gohSteps hyperbolicGohFuelModel)
+    (\acc, tok => if pred tok then addBox (strength tok) acc else acc)
+    (intToBoxInt 0)
+    strm
+
+||| Zero-allocation field tensor flux decomposition directly across a stream using Hyperbolic GohFuel (128 DE ROM).
+public export
+fusedComputeFieldTensorStreamFuelModel : FusedStream GaugeFieldToken -> (BoxInt, BoxInt)
+fusedComputeFieldTensorStreamFuelModel strm =
+  foldStreamNat (gohSteps hyperbolicGohFuelModel)
+    (\acc, tok =>
+      if mu (index tok) == 0 || nu (index tok) == 0
+        then (addBox (strength tok) (fst acc), snd acc)
+        else (fst acc, addBox (strength tok) (snd acc)))
+    (the (BoxInt, BoxInt) (intToBoxInt 0, intToBoxInt 0))
+    strm
 
 --------------------------------------------------------------------------------
 -- 2. DEFORESTED WILSON LOOP PLAQUETTE STREAMING
