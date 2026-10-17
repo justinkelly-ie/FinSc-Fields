@@ -64,17 +64,23 @@ fusedIntegrateGaugeFluxStreamFuelModel : FusedStream GaugeFieldToken -> BoxInt
 fusedIntegrateGaugeFluxStreamFuelModel strm =
   foldStreamNat (gohSteps hyperbolicGohFuelModel) (\acc, tok => addBox (strength tok) acc) (intToBoxInt 0) strm
 
+||| Integrates total gauge flux \oint F_{\mu\nu} across a deforested stream using model-indexed GohFuel.
+public export
+fusedIntegrateGaugeFluxFuelModel : GohFuel cap -> List (SpacetimeIndex, BoxInt) -> BoxInt
+fusedIntegrateGaugeFluxFuelModel fuel items =
+  foldStreamNat (gohSteps fuel) (\acc, (idx, val) => strength (MkGaugeToken idx val) + acc) (intToBoxInt 0) (stream items)
+
 ||| Integrates total gauge flux \oint F_{\mu\nu} across a deforested stream using foldStreamNat.
 public export
 fusedIntegrateGaugeFlux : Fuel -> List (SpacetimeIndex, BoxInt) -> BoxInt
 fusedIntegrateGaugeFlux _ items =
-  foldStreamNat (length items) (\acc, (idx, val) => strength (MkGaugeToken idx val) + acc) (intToBoxInt 0) (stream items)
+  fusedIntegrateGaugeFluxFuelModel hyperbolicGohFuelModel items
 
-||| Integrates total gauge flux using a 2LTT Conjugate Hylomorphism (Mamamorphism).
+||| Integrates total gauge flux using a 2LTT Conjugate Hylomorphism and model-indexed GohFuel.
 public export
-fusedConjugateGaugeFlux : Fuel -> List (SpacetimeIndex, BoxInt) -> BoxInt
-fusedConjugateGaugeFlux _ items =
-  fusedConjugateHyloNat (length items + 1)
+fusedConjugateGaugeFluxFuelModel : GohFuel cap -> List (SpacetimeIndex, BoxInt) -> BoxInt
+fusedConjugateGaugeFluxFuelModel fuel items =
+  fusedConjugateHyloNat (gohSteps fuel)
     (\st => case st of
               [] => Done
               (idx, val) :: rest => Yield (MkGaugeToken idx val) rest)
@@ -85,6 +91,12 @@ fusedConjugateGaugeFlux _ items =
     id
     (intToBoxInt 0)
     items
+
+||| Integrates total gauge flux using a 2LTT Conjugate Hylomorphism (Mamamorphism).
+public export
+fusedConjugateGaugeFlux : Fuel -> List (SpacetimeIndex, BoxInt) -> BoxInt
+fusedConjugateGaugeFlux _ items =
+  fusedConjugateGaugeFluxFuelModel hyperbolicGohFuelModel items
 
 ||| Deforested stream sifting operator filtering gauge field tokens without intermediate allocations.
 %inline public export
