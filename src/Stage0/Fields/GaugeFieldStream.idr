@@ -335,12 +335,12 @@ auditGaugeFieldStreamProof =
       plaqDiag = auditPlaquetteLoopDiagonalProof 1 2 3 4 (intToBoxInt 7)
       plaqLoc  = auditPlaquetteMatterLocalityProof 1 2 3 4 (intToBoxInt 7) (intToBoxInt 5)
 
-  in unwrapBox flux1 == 20 && flux1 == flux2 &&
-     unwrapBox siftedFlux == 12 &&
-     unwrapBox eFlux == 12 && unwrapBox bFlux == 8 &&
-     unwrapBox loopTrace == 4 &&
-     unwrapBox traceLoop4 == 2 && unwrapBox traceLoop2 == (-2) &&
-     unwrapBox traceStream4 == 2 &&
+  in flux1 == intToBoxInt 20 && flux1 == flux2 &&
+     siftedFlux == intToBoxInt 12 &&
+     eFlux == intToBoxInt 12 && bFlux == intToBoxInt 8 &&
+     loopTrace == intToBoxInt 4 &&
+     traceLoop4 == intToBoxInt 2 && traceLoop2 == intToBoxInt (-2) &&
+     traceStream4 == intToBoxInt 2 &&
      plaqDiag && plaqLoc
 
 --------------------------------------------------------------------------------
@@ -396,7 +396,7 @@ auditStreamingGaugeCurvatureProof =
       curvStrm = streamConnectionCurvature strm
       curvList = runFueledStreamNat 1 curvStrm
   in case curvList of
-       [(tok, w)] => unwrapBox (strength tok) == 5 && unwrapBox w == 1
+       [(tok, w)] => strength tok == intToBoxInt 5 && w == intToBoxInt 1
        _ => False
 
 

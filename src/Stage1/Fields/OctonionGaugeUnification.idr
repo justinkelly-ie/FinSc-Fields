@@ -142,7 +142,7 @@ auditGellMannTraceless =
         lookupBoxTree (MkPixel 1 1) tree +
         lookupBoxTree (MkPixel 2 2) tree
       traces = map (\i => trace3 (gellMannMaxel i)) indices
-  in all (\tr => unwrapBox tr == 0) traces
+  in all boxIsZero traces
 
 ||| Verifies that Gell-Mann lambda_3 squared is the projector onto Red and Green:
 ||| lambda_3^2 = diag(1, 1, 0).
@@ -155,4 +155,4 @@ auditGellMannLambda3Squared =
       p00 = lookupBoxTree (MkPixel 0 0) tree
       p11 = lookupBoxTree (MkPixel 1 1) tree
       p22 = lookupBoxTree (MkPixel 2 2) tree
-  in unwrapBox p00 == 1 && unwrapBox p11 == 1 && unwrapBox p22 == 0
+  in p00 == intToBoxInt 1 && p11 == intToBoxInt 1 && boxIsZero p22

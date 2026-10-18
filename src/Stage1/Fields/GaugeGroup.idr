@@ -224,7 +224,7 @@ auditMultisetFieldEnergyProof : Bool
 auditMultisetFieldEnergyProof =
   let m = makeMultisetGaugeTensor (intToBoxInt 3) (intToBoxInt 4)
       energy = computeMultisetFieldEnergy m
-  in unwrapBox energy == 25
+  in energy == intToBoxInt 25
 
 --------------------------------------------------------------------------------
 -- 6. 2LTT STAGING CODE GENERATOR TRANSDUCER

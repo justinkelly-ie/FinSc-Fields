@@ -27,7 +27,7 @@ indexEqMono (MkIndex m1 n1) (MkIndex m2 n2) = m1 == m2 && n1 == n2
 public export
 gaugeTokenEqMono : GaugeFieldToken -> GaugeFieldToken -> Bool
 gaugeTokenEqMono (MkGaugeToken i1 s1) (MkGaugeToken i2 s2) =
-  indexEqMono i1 i2 && unwrapBox s1 == unwrapBox s2
+  indexEqMono i1 i2 && boxEq s1 s2
 
 ||| Canonical Representation Isomorphism for Layer 4 Gauge Field Dynamics.
 public export
