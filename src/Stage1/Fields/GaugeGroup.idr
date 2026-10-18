@@ -14,8 +14,6 @@ import Stage1.MotivicProof
 import Stage0.Fields.SessionType
 import Stage1.MultisetDuality
 import Stage1.TypeTheory.Staging
-import Stage1.TypeTheory.TwoLevel
-
 
 %default total
 
