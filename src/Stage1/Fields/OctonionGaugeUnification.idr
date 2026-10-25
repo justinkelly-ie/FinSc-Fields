@@ -1,7 +1,8 @@
 module Stage1.Fields.OctonionGaugeUnification
 
 import Stage0.BoxInt
-import Stage1.VexelMaxel
+import Stage1.Carrier.Maxel
+import Stage1.Basis.Coordinate
 import Stage1.MultisetTree
 import Stage1.FanoOctonion
 import Stage1.TypeTheory.Staging

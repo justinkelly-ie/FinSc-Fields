@@ -7,7 +7,9 @@ import public Stage1.Math.OnSeq.ConjugateDuality
 import public Stage1.Fields.GaugeGroup
 import Stage0.Multiset
 import Stage1.UnixelFraction
-import Stage1.VexelMaxel
+import Stage1.Carrier.Maxel
+import Stage1.Carrier.Vexel
+import Stage1.Basis.Coordinate
 import Stage1.MaxelTransform
 import Stage0.Fields.SessionType
 import Stage0.StructuralFuel
@@ -181,7 +183,7 @@ streamWilsonLoopTrace f linkStream =
                         [ (((the (Fin 2) Data.Fin.FZ, the (Fin 2) Data.Fin.FZ)), intToBoxInt 1)
                         , (((the (Fin 2) (Data.Fin.FS Data.Fin.FZ), the (Fin 2) (Data.Fin.FS Data.Fin.FZ))), intToBoxInt 1) ]
       loopMaxel = foldStreamFuel f (\acc, step => composeSessionTransitions acc step) identityMaxel linkStream
-  in gaugeFieldEnergy (Stage1.VexelMaxel.MkMaxel (map (\((_, _), w) => (MkPixel 1 0, w)) (items (pixelBox loopMaxel))))
+  in gaugeFieldEnergy (MkMaxel (map (\((_, _), w) => (MkPixel 1 0, w)) (items (pixelBox loopMaxel))))
 
 ||| Evaluates closed Wilson loop plaquette product over a stream of link operators
 ||| using model-indexed Hyperbolic GohFuel (128 DE ROM, Rule 03, Item 1; Rule 04, Item 4).
@@ -193,7 +195,7 @@ streamWilsonLoopTraceFuelModel linkStream =
                         [ (((the (Fin 2) Data.Fin.FZ, the (Fin 2) Data.Fin.FZ)), intToBoxInt 1)
                         , (((the (Fin 2) (Data.Fin.FS Data.Fin.FZ), the (Fin 2) (Data.Fin.FS Data.Fin.FZ))), intToBoxInt 1) ]
       loopMaxel = foldStreamNat (gohSteps hyperbolicGohFuelModel) (\acc, step => composeSessionTransitions acc step) identityMaxel linkStream
-  in gaugeFieldEnergy (Stage1.VexelMaxel.MkMaxel (map (\((_, _), w) => (MkPixel 1 0, w)) (items (pixelBox loopMaxel))))
+  in gaugeFieldEnergy (MkMaxel (map (\((_, _), w) => (MkPixel 1 0, w)) (items (pixelBox loopMaxel))))
 
 ||| Parity test on Nat.
 public export
@@ -278,7 +280,7 @@ fastWilsonLoopTrace linkM n =
 ||| A discrete 4-vertex lattice plaquette link loop [A -> B -> C -> D -> A].
 ||| Composes directed link Maxels via sparse matrix multiplication.
 public export
-latticePlaquetteLoopMaxel : (a, b, c, d : Nat) -> (w : BoxInt) -> Stage1.VexelMaxel.Maxel
+latticePlaquetteLoopMaxel : (a, b, c, d : Nat) -> (w : BoxInt) -> Maxel
 latticePlaquetteLoopMaxel a b c d w =
   let l1 = MkMaxel [(MkPixel a b, intToBoxInt 1)]
       l2 = MkMaxel [(MkPixel b c, intToBoxInt 1)]
