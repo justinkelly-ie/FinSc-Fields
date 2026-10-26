@@ -7,8 +7,6 @@ import public Stage1.Math.OnSeq.ConjugateDuality
 import public Stage1.Fields.GaugeGroup
 import Stage0.Multiset
 import Stage1.UnixelFraction
-import Stage1.Carrier.Maxel
-import Stage1.Carrier.Vexel
 import Stage1.Basis.Coordinate
 import Stage1.MaxelTransform
 import Stage0.Fields.SessionType
@@ -183,7 +181,8 @@ streamWilsonLoopTrace f linkStream =
                         [ (((the (Fin 2) Data.Fin.FZ, the (Fin 2) Data.Fin.FZ)), intToBoxInt 1)
                         , (((the (Fin 2) (Data.Fin.FS Data.Fin.FZ), the (Fin 2) (Data.Fin.FS Data.Fin.FZ))), intToBoxInt 1) ]
       loopMaxel = foldStreamFuel f (\acc, step => composeSessionTransitions acc step) identityMaxel linkStream
-  in gaugeFieldEnergy (MkMaxel (map (\((_, _), w) => (MkPixel 1 0, w)) (items (pixelBox loopMaxel))))
+      e = foldl (\acc, (_, w) => acc + w) (intToBoxInt 0) (items (pixelBox loopMaxel))
+  in gaugeFieldEnergy (singletonCell (mkCell2 1 0) e)
 
 ||| Evaluates closed Wilson loop plaquette product over a stream of link operators
 ||| using model-indexed Hyperbolic GohFuel (128 DE ROM, Rule 03, Item 1; Rule 04, Item 4).
@@ -195,7 +194,8 @@ streamWilsonLoopTraceFuelModel linkStream =
                         [ (((the (Fin 2) Data.Fin.FZ, the (Fin 2) Data.Fin.FZ)), intToBoxInt 1)
                         , (((the (Fin 2) (Data.Fin.FS Data.Fin.FZ), the (Fin 2) (Data.Fin.FS Data.Fin.FZ))), intToBoxInt 1) ]
       loopMaxel = foldStreamNat (gohSteps hyperbolicGohFuelModel) (\acc, step => composeSessionTransitions acc step) identityMaxel linkStream
-  in gaugeFieldEnergy (MkMaxel (map (\((_, _), w) => (MkPixel 1 0, w)) (items (pixelBox loopMaxel))))
+      e = foldl (\acc, (_, w) => acc + w) (intToBoxInt 0) (items (pixelBox loopMaxel))
+  in gaugeFieldEnergy (singletonCell (mkCell2 1 0) e)
 
 ||| Parity test on Nat.
 public export
@@ -282,10 +282,10 @@ fastWilsonLoopTrace linkM n =
 public export
 latticePlaquetteLoopMaxel : (a, b, c, d : Nat) -> (w : BoxInt) -> Maxel
 latticePlaquetteLoopMaxel a b c d w =
-  let l1 = MkMaxel [(MkPixel a b, intToBoxInt 1)]
-      l2 = MkMaxel [(MkPixel b c, intToBoxInt 1)]
-      l3 = MkMaxel [(MkPixel c d, intToBoxInt 1)]
-      l4 = MkMaxel [(MkPixel d a, w)]
+  let l1 = singletonCell (mkCell2 a b) (intToBoxInt 1)
+      l2 = singletonCell (mkCell2 b c) (intToBoxInt 1)
+      l3 = singletonCell (mkCell2 c d) (intToBoxInt 1)
+      l4 = singletonCell (mkCell2 d a) w
   in mulMaxel (mulMaxel (mulMaxel l1 l2) l3) l4
 
 ||| Compile-time verification witness: Closed plaquette operator definitionally reduces
@@ -295,7 +295,7 @@ public export
 auditPlaquetteLoopDiagonalProof : (a, b, c, d : Nat) -> (w : BoxInt) -> Bool
 auditPlaquetteLoopDiagonalProof a b c d w =
   let mPlaq = latticePlaquetteLoopMaxel a b c d w
-      wDiag = lookupPixel (MkPixel a a) mPlaq
+      wDiag = lookupCellMultiset (mkCell2 a a) mPlaq
   in boxEq wDiag w
 
 ||| Invariant audit: Plaquette operator preserves matter coordinate locality without spatial drift:
@@ -304,9 +304,9 @@ public export
 auditPlaquetteMatterLocalityProof : (a, b, c, d : Nat) -> (w, v : BoxInt) -> Bool
 auditPlaquetteMatterLocalityProof a b c d w v =
   let mPlaq = latticePlaquetteLoopMaxel a b c d w
-      vIn   = MkVexel [(MkUnixel a, v)]
-      vOut  = canonicalizeVexel (actMaxelVexel mPlaq vIn)
-      vDiag = lookupUnixel (MkUnixel a) vOut
+      vIn   = singletonCell (mkCell1 a) v
+      vOut  = actMaxelVexel mPlaq vIn
+      vDiag = lookupCellMultiset (mkCell1 a) vOut
   in boxEq vDiag (w * v)
 
 --------------------------------------------------------------------------------

@@ -5,8 +5,6 @@ import Stage1.Order.Preorder
 import Stage0.Multiset
 import Stage0.Multiset
 import Stage1.UnixelFraction
-
-import Stage1.Carrier.Maxel
 import Stage1.Basis.Coordinate
 import Stage1.MaxelTransform
 import Stage0.Applicative

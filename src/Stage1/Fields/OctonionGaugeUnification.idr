@@ -1,12 +1,12 @@
 module Stage1.Fields.OctonionGaugeUnification
 
 import Stage0.BoxInt
-import Stage1.Carrier.Maxel
 import Stage1.Basis.Coordinate
 import Stage1.MultisetTree
 import Stage1.FanoOctonion
 import Stage1.TypeTheory.Staging
 import Data.Vect
+import Data.List
 
 %default total
 
@@ -69,14 +69,12 @@ fanoToSu3Sector E7 = SectorSinglet
 ||| Helper to build a 3x3 BoxSquareMaxel from a list of indexed entries ((r, c), val).
 public export
 makeMatrix3 : List ((Nat, Nat), Integer) -> BoxSquareMaxel 3
-makeMatrix3 entries =
-  let step : BoxMultisetTree Pixel -> ((Nat, Nat), Integer) -> BoxMultisetTree Pixel
-      step acc ((r, c), v) =
-        if v /= 0
-           then setBoxTree (MkPixel r c) (intToBoxInt v) acc
-           else acc
-      tree = foldl step BoxLeaf entries
-  in MkBoxSquareMaxel tree
+makeMatrix3 [] = MkBoxSquareMaxel BoxLeaf
+makeMatrix3 (((r, c), v) :: rest) =
+  let MkBoxSquareMaxel tree = makeMatrix3 rest
+  in if v /= 0
+       then MkBoxSquareMaxel (setBoxTree (mkPixel r c) (intToBoxInt v) tree)
+       else MkBoxSquareMaxel tree
 
 ||| The 8 discrete Gell-Mann matrices generating su(3) over the 3 color states (0=R, 1=G, 2=B):
 ||| lambda_1 = [ [0, 1, 0], [1, 0, 0], [0, 0, 0] ]
