@@ -102,12 +102,12 @@ makeGaugeFieldTensor e b = makeGaugeFieldMaxel e b
 ||| Extracts Electric Field E component from 2-form Maxel (pixel [1, 0]).
 public export
 electricField : Maxel -> BoxInt
-electricField m = lookupPixel (MkPixel 1 0) m
+electricField m = lookupCellMultiset (MkPixel 1 0) m
 
 ||| Extracts Magnetic Flux B component from 2-form Maxel (pixel [2, 3]).
 public export
 magneticFlux : Maxel -> BoxInt
-magneticFlux m = lookupPixel (MkPixel 2 3) m
+magneticFlux m = lookupCellMultiset (MkPixel 2 3) m
 
 ||| Action of U(1) Gauge Group phase transformation on field potentials.
 ||| Local phase rotation preserves invariant field tensor norm (E^2 + B^2).
