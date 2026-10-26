@@ -69,12 +69,12 @@ fanoToSu3Sector E7 = SectorSinglet
 ||| Helper to build a 3x3 BoxSquareMaxel from a list of indexed entries ((r, c), val).
 public export
 makeMatrix3 : List ((Nat, Nat), Integer) -> BoxSquareMaxel 3
-makeMatrix3 [] = MkBoxSquareMaxel BoxLeaf
+makeMatrix3 [] = MkSquareMaxel BoxLeaf
 makeMatrix3 (((r, c), v) :: rest) =
-  let MkBoxSquareMaxel tree = makeMatrix3 rest
+  let MkSquareMaxel tree = makeMatrix3 rest
   in if v /= 0
-       then MkBoxSquareMaxel (setBoxTree (mkPixel r c) (intToBoxInt v) tree)
-       else MkBoxSquareMaxel tree
+       then MkSquareMaxel (setBoxTree (mkPixel r c) (intToBoxInt v) tree)
+       else MkSquareMaxel tree
 
 ||| The 8 discrete Gell-Mann matrices generating su(3) over the 3 color states (0=R, 1=G, 2=B):
 ||| lambda_1 = [ [0, 1, 0], [1, 0, 0], [0, 0, 0] ]
@@ -136,7 +136,7 @@ auditGellMannTraceless =
   let indices : List Nat
       indices = [1, 2, 3, 4, 5, 6, 7, 8]
       trace3 : BoxSquareMaxel 3 -> BoxInt
-      trace3 (MkBoxSquareMaxel tree) =
+      trace3 (MkSquareMaxel tree) =
         lookupBoxTree (MkPixel 0 0) tree +
         lookupBoxTree (MkPixel 1 1) tree +
         lookupBoxTree (MkPixel 2 2) tree
@@ -150,7 +150,7 @@ auditGellMannLambda3Squared : Bool
 auditGellMannLambda3Squared =
   let l3 = gellMannMaxel 3
       l3_sq = mulBoxSquareMaxel l3 l3
-      MkBoxSquareMaxel tree = l3_sq
+      MkSquareMaxel tree = l3_sq
       p00 = lookupBoxTree (MkPixel 0 0) tree
       p11 = lookupBoxTree (MkPixel 1 1) tree
       p22 = lookupBoxTree (MkPixel 2 2) tree
