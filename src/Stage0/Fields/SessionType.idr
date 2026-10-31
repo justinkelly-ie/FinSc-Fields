@@ -48,11 +48,6 @@ public export
 data MultisetSession : (p : SessionProto) -> (a : Type) -> Type where
   MkMsetChan : (carrier : Multiset BoxInt a) -> MultisetSession p a
 
-||| Type alias for MultisetSession.
-public export
-MultisetChannel : SessionProto -> Type -> Type
-MultisetChannel = MultisetSession
-
 ||| Linearly deposits a gauge flux token into a session multiset.
 public export
 depositGaugeFlux : (1 session : MultisetSession (Send a p) a) ->
@@ -61,13 +56,6 @@ depositGaugeFlux : (1 session : MultisetSession (Send a p) a) ->
 depositGaugeFlux (MkMsetChan carrier) tok w =
   MkMsetChan (AddM tok w carrier)
 
-||| Alias for depositGaugeFlux.
-public export
-sendGaugeTokenMset : (1 chan : MultisetSession (Send a p) a) ->
-                     (tok : a) -> (w : BoxInt) ->
-                     MultisetSession p a
-sendGaugeTokenMset = depositGaugeFlux
-
 ||| Linearly withdraws a gauge flux token from a session multiset.
 public export
 withdrawGaugeFlux : (1 session : MultisetSession (Recv a p) a) ->
@@ -75,21 +63,10 @@ withdrawGaugeFlux : (1 session : MultisetSession (Recv a p) a) ->
 withdrawGaugeFlux (MkMsetChan ZeroM) = Left (MkMsetChan ZeroM)
 withdrawGaugeFlux (MkMsetChan (AddM x w rest)) = Right (x, w, MkMsetChan rest)
 
-||| Alias for withdrawGaugeFlux.
-public export
-recvGaugeTokenMset : (1 chan : MultisetSession (Recv a p) a) ->
-                     Either (MultisetSession p a) (a, BoxInt, MultisetSession p a)
-recvGaugeTokenMset = withdrawGaugeFlux
-
 ||| Linearly terminates a completed multiset session, returning the final multiset carrier.
 public export
 closeGaugeSession : (1 session : MultisetSession Close a) -> Multiset BoxInt a
 closeGaugeSession (MkMsetChan carrier) = carrier
-
-||| Alias for closeGaugeSession.
-public export
-closeGaugeChannelMset : (1 chan : MultisetSession Close a) -> Multiset BoxInt a
-closeGaugeChannelMset = closeGaugeSession
 
 --------------------------------------------------------------------------------
 -- 3. BILATERAL MULTISET FLUX EXCHANGE & CHARGE CONSERVATION

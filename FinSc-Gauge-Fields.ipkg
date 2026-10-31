@@ -8,7 +8,6 @@ sourcedir = "src"
 
 modules = GaugeFields,
           Reflect.GaugeAuditor,
-          Fields,
           Stage0.Fields.GaugeFieldStream,
           Stage0.Fields.SessionType,
           Stage1.Fields.GaugeGroup,
