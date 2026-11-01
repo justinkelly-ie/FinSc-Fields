@@ -63,12 +63,12 @@ fanoToSu3Sector E6 = SectorAntitriplet ColorBlue
 fanoToSu3Sector E7 = SectorSinglet
 
 ------------------------------------------------------------------------
--- 2. DISCRETE GELL-MANN MATRICES AS BoxSquareMaxel 3
+-- 2. DISCRETE GELL-MANN MATRICES AS SquareMaxel 3
 ------------------------------------------------------------------------
 
-||| Helper to build a 3x3 BoxSquareMaxel from a list of indexed entries ((r, c), val).
+||| Helper to build a 3x3 SquareMaxel from a list of indexed entries ((r, c), val).
 public export
-makeMatrix3 : List ((Nat, Nat), Integer) -> BoxSquareMaxel 3
+makeMatrix3 : List ((Nat, Nat), Integer) -> SquareMaxel 3
 makeMatrix3 [] = MkSquareMaxel BoxLeaf
 makeMatrix3 (((r, c), v) :: rest) =
   let MkSquareMaxel tree = makeMatrix3 rest
@@ -86,7 +86,7 @@ makeMatrix3 (((r, c), v) :: rest) =
 ||| lambda_7 = [ [0, 0, 0], [0, 0, -1], [0, 1, 0] ] (skew-symmetric proxy)
 ||| lambda_8 = [ [1, 0, 0], [0, 1, 0], [0, 0, -2] ] (unnormalized integer diagonal [1, 1, -2])
 public export
-gellMannMaxel : (idx : Nat) -> BoxSquareMaxel 3
+gellMannMaxel : (idx : Nat) -> SquareMaxel 3
 gellMannMaxel 1 = makeMatrix3 [ ((0, 1), 1), ((1, 0), 1) ]
 gellMannMaxel 2 = makeMatrix3 [ ((0, 1), -1), ((1, 0), 1) ]
 gellMannMaxel 3 = makeMatrix3 [ ((0, 0), 1), ((1, 1), -1) ]
@@ -99,7 +99,7 @@ gellMannMaxel _ = makeMatrix3 []
 
 ||| 2LTT Staged compilation of the 8 Gell-Mann generators at Level 1.
 public export
-stagedGellMannMaxel : (idx : Nat) -> Code (BoxSquareMaxel 3)
+stagedGellMannMaxel : (idx : Nat) -> Code (SquareMaxel 3)
 stagedGellMannMaxel idx = quote (gellMannMaxel idx)
 
 ------------------------------------------------------------------------
@@ -135,7 +135,7 @@ auditGellMannTraceless : Bool
 auditGellMannTraceless =
   let indices : List Nat
       indices = [1, 2, 3, 4, 5, 6, 7, 8]
-      trace3 : BoxSquareMaxel 3 -> BoxInt
+      trace3 : SquareMaxel 3 -> BoxInt
       trace3 (MkSquareMaxel tree) =
         lookupBoxTree (MkPixel 0 0) tree +
         lookupBoxTree (MkPixel 1 1) tree +
@@ -149,7 +149,7 @@ public export
 auditGellMannLambda3Squared : Bool
 auditGellMannLambda3Squared =
   let l3 = gellMannMaxel 3
-      l3_sq = mulBoxSquareMaxel l3 l3
+      l3_sq = mulSquareMaxel l3 l3
       MkSquareMaxel tree = l3_sq
       p00 = lookupBoxTree (MkPixel 0 0) tree
       p11 = lookupBoxTree (MkPixel 1 1) tree
