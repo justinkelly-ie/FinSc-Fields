@@ -7,6 +7,7 @@ module Stage0.Fields.SessionType
 
 import Stage0.BoxInt
 import Stage0.Multiset
+import Stage0.Token
 import Stage0.OnSeq.FusedStream
 import Stage1.MaxelTransform
 
@@ -56,12 +57,32 @@ depositGaugeFlux : (1 session : MultisetSession (Send a p) a) ->
 depositGaugeFlux (MkMsetChan carrier) tok w =
   MkMsetChan (AddM tok w carrier)
 
+||| Linearly deposits an exact QTT 1 LToken into a session multiset (Rule 04 §1):
+public export
+depositGaugeFluxLinear : (1 session : MultisetSession (Send a p) a) ->
+                         (1 tok : LToken a) -> (w : BoxInt) ->
+                         MultisetSession p a
+depositGaugeFluxLinear (MkMsetChan carrier) (MkLToken tok) w =
+  MkMsetChan (AddM tok w carrier)
+
 ||| Linearly withdraws a gauge flux token from a session multiset.
 public export
 withdrawGaugeFlux : (1 session : MultisetSession (Recv a p) a) ->
                     Either (MultisetSession p a) (a, BoxInt, MultisetSession p a)
 withdrawGaugeFlux (MkMsetChan ZeroM) = Left (MkMsetChan ZeroM)
 withdrawGaugeFlux (MkMsetChan (AddM x w rest)) = Right (x, w, MkMsetChan rest)
+
+||| Linearly withdraws an exact QTT 1 LToken from a session multiset (Rule 04 §1):
+public export
+withdrawGaugeFluxLinear : (1 session : MultisetSession (Recv a p) a) ->
+                          Either (MultisetSession p a) (LToken a, BoxInt, MultisetSession p a)
+withdrawGaugeFluxLinear (MkMsetChan ZeroM) = Left (MkMsetChan ZeroM)
+withdrawGaugeFluxLinear (MkMsetChan (AddM x w rest)) = Right (MkLToken x, w, MkMsetChan rest)
+
+||| Deforested stream of elementary tokens contained in the session multiset carrier:
+public export
+sessionTokenStream : MultisetSession p a -> FusedStream (Token a)
+sessionTokenStream (MkMsetChan carrier) = streamTokens carrier
 
 ||| Linearly terminates a completed multiset session, returning the final multiset carrier.
 public export
@@ -120,3 +141,23 @@ public export
 composeSessionTransitions : Eq a => Eq b => Eq c =>
                             MaxelTransform a b -> MaxelTransform b c -> MaxelTransform a c
 composeSessionTransitions t1 t2 = maxelMaxelBeta t1 t2
+
+--------------------------------------------------------------------------------
+-- 5. LINEAR FLUX ROUND-TRIP AUDIT
+--------------------------------------------------------------------------------
+
+||| Audits linear session gauge flux deposit and withdrawal preserving token identity:
+public export
+auditLinearSessionFluxProof : Bool
+auditLinearSessionFluxProof =
+  let s0 = the (MultisetSession (Send Nat (Recv Nat Close)) Nat) (MkMsetChan ZeroM)
+      s1 = depositGaugeFluxLinear s0 (MkLToken 42) (MkBoxInt 1)
+  in case withdrawGaugeFluxLinear s1 of
+       Right (MkLToken val, w, s2) =>
+         (val == 42) && boxEq w (MkBoxInt 1)
+       Left _ => False
+
+||| Compile-time witness: Linear gauge flux round-trip preserves token payload definitionally.
+public export
+0 prfLinearSessionFlux : (Stage0.Fields.SessionType.auditLinearSessionFluxProof = True)
+prfLinearSessionFlux = Refl
