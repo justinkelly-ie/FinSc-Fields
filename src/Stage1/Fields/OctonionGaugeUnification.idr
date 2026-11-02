@@ -97,6 +97,18 @@ gellMannMaxel 7 = makeMatrix3 [ ((1, 2), -1), ((2, 1), 1) ]
 gellMannMaxel 8 = makeMatrix3 [ ((0, 0), 1), ((1, 1), 1), ((2, 2), -2) ]
 gellMannMaxel _ = makeMatrix3 []
 
+||| Synthesizes the 8 Gell-Mann gluon matrices from the 27 Elliptic confinement tokens (3^3 = 27):
+public export
+synthesizeGellMannFromEllipticCount : Nat -> Vect 8 (SquareMaxel 3)
+synthesizeGellMannFromEllipticCount ellCount =
+  if ellCount >= 27
+    then [ gellMannMaxel 1, gellMannMaxel 2, gellMannMaxel 3, gellMannMaxel 4
+         , gellMannMaxel 5, gellMannMaxel 6, gellMannMaxel 7, gellMannMaxel 8
+         ]
+    else [ makeMatrix3 [], makeMatrix3 [], makeMatrix3 [], makeMatrix3 []
+         , makeMatrix3 [], makeMatrix3 [], makeMatrix3 [], makeMatrix3 []
+         ]
+
 ||| 2LTT Staged compilation of the 8 Gell-Mann generators at Level 1.
 public export
 stagedGellMannMaxel : (idx : Nat) -> Code (SquareMaxel 3)
