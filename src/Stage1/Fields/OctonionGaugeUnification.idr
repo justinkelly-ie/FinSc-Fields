@@ -168,15 +168,14 @@ auditG2DimensionSum =
 public export
 auditGellMannTraceless : Bool
 auditGellMannTraceless =
-  let indices : List Nat
+  let indices : Vect 8 Nat
       indices = [1, 2, 3, 4, 5, 6, 7, 8]
       trace3 : SquareMaxel 3 -> BoxInt
       trace3 (MkSquareMaxel tree) =
         lookupCellMultiset (MkPixel 0 0) tree +
         lookupCellMultiset (MkPixel 1 1) tree +
         lookupCellMultiset (MkPixel 2 2) tree
-      traces = map (\i => trace3 (gellMannMaxel i)) indices
-  in all boxIsZero traces
+  in foldl (\acc, i => acc && boxIsZero (trace3 (gellMannMaxel i))) True indices
 
 ||| Verifies that Gell-Mann lambda_3 squared is the projector onto Red and Green:
 ||| lambda_3^2 = diag(1, 1, 0).

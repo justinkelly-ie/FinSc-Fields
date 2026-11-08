@@ -12,6 +12,8 @@ import Stage1.MaxelTransform
 import Stage0.Fields.SessionType
 import Stage0.StructuralFuel
 import Stage0.BoxNat
+import Stage1.Carrier.CellMultiset
+import Stage1.MultisetTree
 import Data.Fin
 import Data.Fuel
 
@@ -52,6 +54,15 @@ unfoldGaugeStream items = MkStream nextStep items
     nextStep [] = Done
     nextStep ((idx, val) :: rest) = Yield (MkGaugeToken idx val) rest
 
+||| Streams a Gauge Field Tensor (Maxel) directly into a deforested FusedStream GaugeFieldToken
+||| without intermediate List materialization.
+public export
+streamGaugeFieldMaxel : Maxel -> FusedStream GaugeFieldToken
+streamGaugeFieldMaxel maxel =
+  mapStream (\(pix, w) =>
+    MkGaugeToken (MkIndex (cast (pixelRow pix)) (cast (pixelCol pix))) w
+  ) (streamCellMultiset maxel)
+
 ||| Integrates total gauge flux directly across a deforested GaugeFieldToken stream.
 public export
 fusedIntegrateGaugeFluxStream : Fuel -> FusedStream GaugeFieldToken -> BoxInt
@@ -63,6 +74,18 @@ public export
 fusedIntegrateGaugeFluxStreamFuelModel : FusedStream GaugeFieldToken -> BoxInt
 fusedIntegrateGaugeFluxStreamFuelModel strm =
   foldStreamNat (gohSteps hyperbolicGohFuelModel) (\acc, tok => addBox (strength tok) acc) (intToBoxInt 0) strm
+
+||| Direct zero-allocation gauge flux integration across a Maxel field tensor using model-indexed GohFuel.
+public export
+integrateGaugeFieldMaxelFuelModel : GohFuel cap -> Maxel -> BoxInt
+integrateGaugeFieldMaxelFuelModel fuel maxel =
+  foldStreamNat (gohSteps fuel) (\acc, tok => addBox (strength tok) acc) (intToBoxInt 0) (streamGaugeFieldMaxel maxel)
+
+||| Direct zero-allocation gauge flux integration across a Maxel field tensor.
+public export
+integrateGaugeFieldMaxel : Fuel -> Maxel -> BoxInt
+integrateGaugeFieldMaxel _ maxel =
+  integrateGaugeFieldMaxelFuelModel hyperbolicGohFuelModel maxel
 
 ||| Integrates total gauge flux \oint F_{\mu\nu} across a deforested stream using model-indexed GohFuel.
 public export
@@ -167,6 +190,17 @@ fusedComputeFieldTensorStreamFuelModel strm =
     (the (BoxInt, BoxInt) (intToBoxInt 0, intToBoxInt 0))
     strm
 
+||| Direct field tensor flux decomposition (temporal/E-field vs spatial/B-field) over a native Maxel carrier.
+public export
+computeGaugeFieldTensorFluxFuelModel : Maxel -> (BoxInt, BoxInt)
+computeGaugeFieldTensorFluxFuelModel maxel =
+  fusedComputeFieldTensorStreamFuelModel (streamGaugeFieldMaxel maxel)
+
+public export
+computeGaugeFieldTensorFlux : Fuel -> Maxel -> (BoxInt, BoxInt)
+computeGaugeFieldTensorFlux _ maxel =
+  computeGaugeFieldTensorFluxFuelModel maxel
+
 --------------------------------------------------------------------------------
 -- 2. DEFORESTED WILSON LOOP PLAQUETTE STREAMING
 --------------------------------------------------------------------------------
@@ -181,7 +215,7 @@ streamWilsonLoopTrace f linkStream =
                         [ (((the (Fin 2) Data.Fin.FZ, the (Fin 2) Data.Fin.FZ)), intToBoxInt 1)
                         , (((the (Fin 2) (Data.Fin.FS Data.Fin.FZ), the (Fin 2) (Data.Fin.FS Data.Fin.FZ))), intToBoxInt 1) ]
       loopMaxel = foldStreamFuel f (\acc, step => composeSessionTransitions acc step) identityMaxel linkStream
-      e = foldl (\acc, (_, w) => acc + w) (intToBoxInt 0) (items (pixelBox loopMaxel))
+      e = totalMassBox (pixelBox loopMaxel)
   in gaugeFieldEnergy (singletonCell (mkCell2 1 0) e)
 
 ||| Evaluates closed Wilson loop plaquette product over a stream of link operators
@@ -194,7 +228,7 @@ streamWilsonLoopTraceFuelModel linkStream =
                         [ (((the (Fin 2) Data.Fin.FZ, the (Fin 2) Data.Fin.FZ)), intToBoxInt 1)
                         , (((the (Fin 2) (Data.Fin.FS Data.Fin.FZ), the (Fin 2) (Data.Fin.FS Data.Fin.FZ))), intToBoxInt 1) ]
       loopMaxel = foldStreamNat (gohSteps hyperbolicGohFuelModel) (\acc, step => composeSessionTransitions acc step) identityMaxel linkStream
-      e = foldl (\acc, (_, w) => acc + w) (intToBoxInt 0) (items (pixelBox loopMaxel))
+      e = totalMassBox (pixelBox loopMaxel)
   in gaugeFieldEnergy (singletonCell (mkCell2 1 0) e)
 
 ||| Parity test on Nat.
@@ -336,10 +370,16 @@ auditGaugeFieldStreamProof =
       traceStream4 = traceGaugeTransfer2x2 streamLoop
       plaqDiag = auditPlaquetteLoopDiagonalProof 1 2 3 4 (intToBoxInt 7)
       plaqLoc  = auditPlaquetteMatterLocalityProof 1 2 3 4 (intToBoxInt 7) (intToBoxInt 5)
+      fieldMaxel = makeGaugeFieldTensor (intToBoxInt 12) (intToBoxInt 8)
+      fluxMaxel = integrateGaugeFieldMaxelFuelModel hyperbolicGohFuelModel fieldMaxel
+      fluxRes = computeGaugeFieldTensorFluxFuelModel fieldMaxel
+      eMaxel = fst fluxRes
+      bMaxel = snd fluxRes
 
   in flux1 == intToBoxInt 20 && flux1 == flux2 &&
      siftedFlux == intToBoxInt 12 &&
      eFlux == intToBoxInt 12 && bFlux == intToBoxInt 8 &&
+     fluxMaxel == intToBoxInt 20 && eMaxel == intToBoxInt 12 && bMaxel == intToBoxInt 8 &&
      loopTrace == intToBoxInt 4 &&
      traceLoop4 == intToBoxInt 2 && traceLoop2 == intToBoxInt (-2) &&
      traceStream4 == intToBoxInt 2 &&
@@ -364,6 +404,15 @@ makeBianchiGaugeFieldStream : (fE : Nat) -> (fB : Nat) -> (totalFlux : Nat) ->
                               BianchiGaugeFieldStream fE fB totalFlux
 makeBianchiGaugeFieldStream fE fB tot prf items =
   MkBianchiGaugeFieldStream (unfoldGaugeStream items) prf
+
+||| Constructs a deforested Gauge Field Stream directly from a Maxel tensor without intermediate List allocation.
+public export
+makeBianchiGaugeFieldStreamMaxel : (fE : Nat) -> (fB : Nat) -> (totalFlux : Nat) ->
+                                   (0 prf : BianchiIdentityWitness fE fB totalFlux) ->
+                                   Maxel ->
+                                   BianchiGaugeFieldStream fE fB totalFlux
+makeBianchiGaugeFieldStreamMaxel fE fB tot prf maxel =
+  MkBianchiGaugeFieldStream (streamGaugeFieldMaxel maxel) prf
 
 --------------------------------------------------------------------------------
 -- 5. DEFORESTED GAUGE CONNECTION STREAM & PLAQUETTE COBOUNDARY (F = dA)
@@ -396,10 +445,10 @@ auditStreamingGaugeCurvatureProof =
   let conn = MkConnectionToken (MkIndex 0 1) (intToBoxInt 5)
       strm = stream [(conn, intToBoxInt 1)]
       curvStrm = streamConnectionCurvature strm
-      curvList = runFueledStreamNat 1 curvStrm
-  in case curvList of
-       [(tok, w)] => strength tok == intToBoxInt 5 && w == intToBoxInt 1
-       _ => False
+      (totalStrength, totalWeight) =
+        foldStreamNat 2 (\(sAcc, wAcc), (tok, w) => (sAcc + strength tok, wAcc + w))
+          (intToBoxInt 0, intToBoxInt 0) curvStrm
+  in totalStrength == intToBoxInt 5 && totalWeight == intToBoxInt 1
 
 
 
