@@ -109,8 +109,20 @@ public export
 magneticFlux : Maxel -> BoxInt
 magneticFlux m = lookupCellMultiset (MkPixel 2 3) m
 
-||| Action of U(1) Gauge Group phase transformation on field potentials.
-||| Local phase rotation preserves invariant field tensor norm (E^2 + B^2).
+||| A 1-Form Gauge Potential Cochain A_μ (vector potential) represented as a Vexel.
+public export
+PotentialCochain : Type
+PotentialCochain = Vexel
+
+||| Gauge transformation of connection 1-form A_μ ↦ A_μ + ∂_μ χ.
+||| Shifts the vector potential by the gradient of the gauge scalar phase.
+public export
+transformGaugePotential : GaugePhase -> Vexel -> PotentialCochain -> PotentialCochain
+transformGaugePotential (MkGaugePhase _) gradChi a = addVexel a gradChi
+
+||| Action of U(1) Gauge Group phase transformation on 2-form field curvature tensors F = dA.
+||| Curvature 2-forms F_μν = ∂_μ A_ν - ∂_ν A_μ are strictly gauge-invariant (F ↦ F),
+||| preserving the field energy density Q_EM = E² + B² identically.
 public export
 warpFieldByGaugeTensor : GaugePhase -> Maxel -> Maxel
 warpFieldByGaugeTensor phase tensor = tensor
