@@ -138,7 +138,7 @@ streamSessionTransduce transform strm = streamMaxelAction transform strm
 
 ||| 2D x 2D Cut-elimination for bilateral gauge transitions across intermediate wire b.
 public export
-composeSessionTransitions : Eq a => Eq b => Eq c =>
+composeSessionTransitions : Ord a => Ord b => Ord c =>
                             MaxelTransform a b -> MaxelTransform b c -> MaxelTransform a c
 composeSessionTransitions t1 t2 = maxelMaxelBeta t1 t2
 
