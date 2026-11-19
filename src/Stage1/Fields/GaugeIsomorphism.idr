@@ -16,7 +16,7 @@ import public Stage1.Fields.GaugeGroup
 public export
 record GaugeIsomorphism (dim : Nat) (color : MetricColor) where
   constructor MkGaugeIso
-  ||| Gauge transition matrix Maxel (morphism in ChromoCategory)
+  ||| Gauge transition matrix Maxel connecting `VexelSpace` configurations
   transformMatrix : Maxel
 
 ||| Constructs the canonical U(1) identity gauge isomorphism.

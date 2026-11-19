@@ -34,16 +34,16 @@ public export
 gaugeRepIso : TheoryRepresentationIsomorphism L4_FieldDynamics GaugeFieldToken GaugeFieldToken
 gaugeRepIso =
   MkTheoryRepIso
-    "L4: Gauge Plaquette Tensor -> Multiset GaugeFieldToken"
-    (\tok => AddM tok (MkBoxInt 1) ZeroM)
+    "L4: Gauge Plaquette Tensor -> Carrier GaugeFieldToken"
+    (\tok => singletonCarrier tok (MkBoxInt 1))
     (\m => case m of
-             AddM tok _ _ => tok
-             ZeroM        => zeroGaugeToken)
+             BoxNode _ _ tok _ _ => tok
+             BoxLeaf             => zeroGaugeToken)
     (\tok =>
-      let m = AddM tok (MkBoxInt 1) ZeroM
+      let m = singletonCarrier tok (MkBoxInt 1)
           tok' = case m of
-                   AddM x _ _ => x
-                   ZeroM      => zeroGaugeToken
+                   BoxNode _ _ x _ _ => x
+                   BoxLeaf           => zeroGaugeToken
       in gaugeTokenEqMono tok' tok
     )
 

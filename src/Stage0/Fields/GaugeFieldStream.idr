@@ -34,6 +34,16 @@ public export
 Eq SpacetimeIndex where
   (MkIndex m1 n1) == (MkIndex m2 n2) = m1 == m2 && n1 == n2
 
+public export
+Ord SpacetimeIndex where
+  compare (MkIndex m1 n1) (MkIndex m2 n2) =
+    case compare m1 m2 of
+      EQ => compare n1 n2
+      o  => o
+
+public export
+DiscreteCoord SpacetimeIndex where
+
 ||| Discrete Gauge Field Tensor Token F_{\mu\nu} carrying index and field magnitude.
 public export
 record GaugeFieldToken where
@@ -45,8 +55,18 @@ public export
 Eq GaugeFieldToken where
   (MkGaugeToken i1 s1) == (MkGaugeToken i2 s2) = i1 == i2 && s1 == s2
 
+public export
+Ord GaugeFieldToken where
+  compare (MkGaugeToken i1 s1) (MkGaugeToken i2 s2) =
+    case compare i1 i2 of
+      EQ => compare s1 s2
+      o  => o
+
+public export
+DiscreteCoord GaugeFieldToken where
+
 ||| Constructs a deforested stream of gauge field tokens from a list of strength values.
-%inline public export
+public export
 unfoldGaugeStream : List (SpacetimeIndex, BoxInt) -> FusedStream GaugeFieldToken
 unfoldGaugeStream items = MkStream nextStep items
   where
@@ -122,12 +142,12 @@ fusedConjugateGaugeFlux _ items =
   fusedConjugateGaugeFluxFuelModel hyperbolicGohFuelModel items
 
 ||| Deforested stream sifting operator filtering gauge field tokens without intermediate allocations.
-%inline public export
+public export
 siftGaugeStream : (GaugeFieldToken -> Bool) -> FusedStream GaugeFieldToken -> FusedStream GaugeFieldToken
 siftGaugeStream = siftFusedStream
 
 ||| Sifts a gauge field stream by specific spacetime index pair (\mu, \nu).
-%inline public export
+public export
 siftGaugeStreamByIndex : SpacetimeIndex -> FusedStream GaugeFieldToken -> FusedStream GaugeFieldToken
 siftGaugeStreamByIndex target = siftFusedStream (\tok => index tok == target)
 

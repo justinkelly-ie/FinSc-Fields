@@ -22,7 +22,7 @@ import Stage1.TypeTheory.Staging
 
 ||| Category-Theoretic Gauge Curvature Adjunction (d ⊣ d^*) between gauge connection potentials A and field strength 2-forms F.
 public export
-MultisetScaleAdjunction Maxel Maxel where
+MultisetScaleDuality Maxel Maxel where
   f_pushforward a = a
   f_pullback    f = f
   verifyUnit _   = Refl
@@ -216,17 +216,27 @@ Eq GaugeFieldKey where
   MagneticComp == MagneticComp = True
   _            == _            = False
 
-||| Constructs a pure Multiset BoxInt GaugeFieldKey tensor.
 public export
-makeMultisetGaugeTensor : BoxInt -> BoxInt -> Multiset BoxInt GaugeFieldKey
-makeMultisetGaugeTensor e b = AddM ElectricComp e (AddM MagneticComp b ZeroM)
+Ord GaugeFieldKey where
+  compare ElectricComp ElectricComp = EQ
+  compare ElectricComp MagneticComp = LT
+  compare MagneticComp ElectricComp = GT
+  compare MagneticComp MagneticComp = EQ
 
-||| Computes exact electromagnetic energy density Q_EM = E^2 + B^2 directly from Multiset BoxInt GaugeFieldKey.
 public export
-computeMultisetFieldEnergy : Multiset BoxInt GaugeFieldKey -> BoxInt
+DiscreteCoord GaugeFieldKey where
+
+||| Constructs a pure Carrier GaugeFieldKey tensor.
+public export
+makeMultisetGaugeTensor : BoxInt -> BoxInt -> Carrier GaugeFieldKey
+makeMultisetGaugeTensor e b = singletonCarrier ElectricComp e <+> singletonCarrier MagneticComp b
+
+||| Computes exact electromagnetic energy density Q_EM = E^2 + B^2 directly from Carrier GaugeFieldKey.
+public export
+computeMultisetFieldEnergy : Carrier GaugeFieldKey -> BoxInt
 computeMultisetFieldEnergy m =
-  let e = multiplicity ElectricComp m
-      b = multiplicity MagneticComp m
+  let e = lookupCarrier ElectricComp m
+      b = lookupCarrier MagneticComp m
   in (e * e) + (b * b)
 
 ||| Audits multiset field energy calculation invariance:
@@ -242,13 +252,13 @@ auditMultisetFieldEnergyProof =
 --------------------------------------------------------------------------------
 
 ||| Deforested 2LTT staged code generator transducer for gauge field energy density.
-%inline public export
-stagedFieldEnergy : Multiset BoxInt GaugeFieldKey -> Code BoxInt
+public export
+stagedFieldEnergy : Carrier GaugeFieldKey -> Code BoxInt
 stagedFieldEnergy m = quote (computeMultisetFieldEnergy m)
 
 ||| QTT 0 erased proof witness verifying gauge field energy staging inverse identity.
 public export
-0 prfStagedFieldEnergy : (m : Multiset BoxInt GaugeFieldKey) -> splice (stagedFieldEnergy m) = computeMultisetFieldEnergy m
+0 prfStagedFieldEnergy : (m : Carrier GaugeFieldKey) -> splice (stagedFieldEnergy m) = computeMultisetFieldEnergy m
 prfStagedFieldEnergy m = inverseSpliceQuote (computeMultisetFieldEnergy m)
 
 

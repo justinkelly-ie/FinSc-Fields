@@ -47,46 +47,65 @@ verifySessionDuality Close      = Refl
 ||| the physical multiset stream without allocation leaks.
 public export
 data MultisetSession : (p : SessionProto) -> (a : Type) -> Type where
-  MkMsetChan : (carrier : Multiset BoxInt a) -> MultisetSession p a
+  MkMsetChan : (carrier : Carrier a) -> MultisetSession p a
 
 ||| Linearly deposits a gauge flux token into a session multiset.
 public export
-depositGaugeFlux : (1 session : MultisetSession (Send a p) a) ->
+depositGaugeFlux : DiscreteCoord a =>
+                   (1 session : MultisetSession (Send a p) a) ->
                    (tok : a) -> (w : BoxInt) ->
                    MultisetSession p a
 depositGaugeFlux (MkMsetChan carrier) tok w =
-  MkMsetChan (AddM tok w carrier)
+  MkMsetChan (carrier <+> singletonCarrier tok w)
 
 ||| Linearly deposits an exact QTT 1 LToken into a session multiset (Rule 04 §1):
 public export
-depositGaugeFluxLinear : (1 session : MultisetSession (Send a p) a) ->
+depositGaugeFluxLinear : DiscreteCoord a =>
+                         (1 session : MultisetSession (Send a p) a) ->
                          (1 tok : LToken a) -> (w : BoxInt) ->
                          MultisetSession p a
 depositGaugeFluxLinear (MkMsetChan carrier) (MkLToken tok) w =
-  MkMsetChan (AddM tok w carrier)
+  MkMsetChan (carrier <+> singletonCarrier tok w)
 
 ||| Linearly withdraws a gauge flux token from a session multiset.
 public export
-withdrawGaugeFlux : (1 session : MultisetSession (Recv a p) a) ->
+withdrawGaugeFlux : DiscreteCoord a =>
+                    (1 session : MultisetSession (Recv a p) a) ->
                     Either (MultisetSession p a) (a, BoxInt, MultisetSession p a)
-withdrawGaugeFlux (MkMsetChan ZeroM) = Left (MkMsetChan ZeroM)
-withdrawGaugeFlux (MkMsetChan (AddM x w rest)) = Right (x, w, MkMsetChan rest)
+withdrawGaugeFlux (MkMsetChan BoxLeaf) = Left (MkMsetChan BoxLeaf)
+withdrawGaugeFlux (MkMsetChan (BoxNode _ l x w r)) = Right (x, w, MkMsetChan (l <+> r))
 
 ||| Linearly withdraws an exact QTT 1 LToken from a session multiset (Rule 04 §1):
 public export
-withdrawGaugeFluxLinear : (1 session : MultisetSession (Recv a p) a) ->
+withdrawGaugeFluxLinear : DiscreteCoord a =>
+                          (1 session : MultisetSession (Recv a p) a) ->
                           Either (MultisetSession p a) (LToken a, BoxInt, MultisetSession p a)
-withdrawGaugeFluxLinear (MkMsetChan ZeroM) = Left (MkMsetChan ZeroM)
-withdrawGaugeFluxLinear (MkMsetChan (AddM x w rest)) = Right (MkLToken x, w, MkMsetChan rest)
+withdrawGaugeFluxLinear (MkMsetChan BoxLeaf) = Left (MkMsetChan BoxLeaf)
+withdrawGaugeFluxLinear (MkMsetChan (BoxNode _ l x w r)) = Right (MkLToken x, w, MkMsetChan (l <+> r))
 
 ||| Deforested stream of elementary tokens contained in the session multiset carrier:
 public export
 sessionTokenStream : MultisetSession p a -> FusedStream (Token a)
-sessionTokenStream (MkMsetChan carrier) = streamTokens carrier
+sessionTokenStream (MkMsetChan carrier) =
+  MkStream {s = (List (Carrier a), Maybe (a, Nat))}
+    (\case
+       ([], Nothing) => Done
+       (BoxLeaf :: stack, Nothing) => Skip (stack, Nothing)
+       (BoxNode _ l x (MkBoxInt w) r :: stack, Nothing) =>
+         let count = boxToNat (absBox (MkBoxInt w))
+             nextStack = l :: r :: stack
+         in case count of
+              Z   => Skip (nextStack, Nothing)
+              S Z => Yield (MkToken x) (nextStack, Nothing)
+              S k => Yield (MkToken x) (nextStack, Just (x, k))
+       (stack, Just (x, Z)) => Skip (stack, Nothing)
+       (stack, Just (x, S k)) => Yield (MkToken x) (stack, Just (x, k))
+    )
+    ([carrier], Nothing)
 
 ||| Linearly terminates a completed multiset session, returning the final multiset carrier.
 public export
-closeGaugeSession : (1 session : MultisetSession Close a) -> Multiset BoxInt a
+closeGaugeSession : (1 session : MultisetSession Close a) -> Carrier a
 closeGaugeSession (MkMsetChan carrier) = carrier
 
 --------------------------------------------------------------------------------
@@ -97,18 +116,19 @@ closeGaugeSession (MkMsetChan carrier) = carrier
 public export
 record BilateralExchange (a : Type) where
   constructor MkExchange
-  sourceMset : Multiset BoxInt a
-  destMset   : Multiset BoxInt a
+  sourceMset : Carrier a
+  destMset   : Carrier a
 
-||| Bilateral exchange: transfers a token of weight `w` from a source multiset
-||| to a destination multiset, ensuring strict resource preservation.
+||| Bilateral exchange: transfers a token of weight `w` from a source carrier
+||| to a destination carrier, ensuring strict resource preservation.
 public export
-exchangeGaugeFlux : Multiset BoxInt a ->
-                    Multiset BoxInt a ->
+exchangeGaugeFlux : DiscreteCoord a =>
+                    Carrier a ->
+                    Carrier a ->
                     (tok : a) -> (w : BoxInt) ->
                     BilateralExchange a
 exchangeGaugeFlux src dst tok w =
-  MkExchange src (AddM tok w dst)
+  MkExchange src (dst <+> singletonCarrier tok w)
 
 ||| Dual session communication step strictly conserves total multiset weight across the boundary:
 |||   TotalWeight(Sender + w) + TotalWeight(Receiver) == TotalWeight(Sender) + TotalWeight(Receiver + w)
@@ -150,7 +170,7 @@ composeSessionTransitions t1 t2 = maxelMaxelBeta t1 t2
 public export
 auditLinearSessionFluxProof : Bool
 auditLinearSessionFluxProof =
-  let s0 = the (MultisetSession (Send Nat (Recv Nat Close)) Nat) (MkMsetChan ZeroM)
+  let s0 = the (MultisetSession (Send Nat (Recv Nat Close)) Nat) (MkMsetChan neutral)
       s1 = depositGaugeFluxLinear s0 (MkLToken 42) (MkBoxInt 1)
   in case withdrawGaugeFluxLinear s1 of
        Right (MkLToken val, w, s2) =>
